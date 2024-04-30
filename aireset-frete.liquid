@@ -1,0 +1,163 @@
+{%- liquid
+  if use_variant
+    assign target = product.selected_or_first_available_variant
+  else
+    assign target = product
+  endif
+
+  assign compare_at_price = target.compare_at_price
+  assign price = target.price | default: 1999
+  assign price_min = product.price_min
+  assign price_max = product.price_max
+  assign available = target.available | default: false
+  assign money_price = price | money
+  assign money_price_min = price_min | money
+  assign money_price_max = price_max | money
+-%}
+<!-- Formulário de Cálculo de Frete -->
+<div id="freteCalculator">
+    <input type="text" id="cepInput" placeholder="Digite seu CEP" />
+    <button onclick="calculaFrete()">Calcular Frete</button>
+</div>
+<div id="loadingIndicator">Carregando...</div>
+<div id="freteResult"></div>
+
+<style>
+#freteCalculator {
+    margin: 20px auto 0 0;
+    max-width: 440px;
+    text-align: left;
+    display: flex;
+    flex-direction: row;
+    align-items: start;
+}
+
+#freteCalculator input, #freteCalculator button {
+    width: 66%; /* Ajustar conforme necessário */
+    padding: 8px 15px;
+    margin-top: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+#freteCalculator button {
+    width: 33%; /* Ajustar conforme necessário */
+  
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+}
+
+#freteCalculator input {  
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
+#loadingIndicator {
+    display: none; /* Escondido por padrão */
+}
+
+#freteResult {
+    margin-top: 20px;
+    color: #337ab7;
+    font-size: 16px;
+    width: 100%;
+}
+
+#freteResult table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#freteResult th, #freteResult td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    color: rgb(var(--color-foreground));
+}
+
+
+</style>
+<script>
+function getQuantity() {
+  const quantityInput = document.querySelector('input[name="quantity"]');
+  return quantityInput ? parseInt(quantityInput.value) : 1; // Default para 1 se não houver input
+}
+
+function getTotalPrice() {
+  const priceElements = document.querySelectorAll('.price-item--sale.price-item--last');
+  let totalPrice = 0;
+  priceElements.forEach(element => {
+    const priceText = element.textContent.trim();
+    const price = parseFloat(priceText.replace('R$', '').replace('.', '').replace(',', '.'));
+    totalPrice += price;
+  });
+  return totalPrice;
+}
+function calculaFrete() {
+    const cep = document.getElementById('cepInput').value;
+    const quantity = getQuantity();
+    const totalPrice = getTotalPrice();
+  
+    const data = {
+      cep: cep,
+      service: 'frenet', // ou 'melhor_envio'
+      origin_site: window.location.hostname,
+      quantity: quantity,
+      totalPrice: totalPrice
+    };
+  
+    if (cep) {
+        document.getElementById('loadingIndicator').style.display = 'block'; // Mostra o carregador
+        const url = 'https://aireset.com.br/shopify.php';
+        const data = {
+            cep: cep,
+            service: 'frenet', // ou 'melhor_envio'
+            origin_site: window.location.hostname
+        };
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loadingIndicator').style.display = 'none'; // Esconde o carregador
+            if (data.error) {
+                document.getElementById('freteResult').innerHTML = 'Erro: ' + data.error;
+            } else {
+                displayShippingOptions(data);
+            }
+        })
+        .catch((error) => {
+            document.getElementById('loadingIndicator').style.display = 'none';
+            console.error('Error:', error);
+            document.getElementById('freteResult').innerHTML = 'Erro ao calcular o frete.';
+        });
+    } else {
+        alert('Por favor, insira um CEP válido.');
+    }
+}
+
+function displayShippingOptions(data) {
+    const container = document.getElementById('freteResult');
+    container.innerHTML = '<table><tr><th>Título</th><th>Valor</th><th>Tempo de Entrega</th></tr>';
+    const table = document.createElement('table');
+
+    data.forEach(option => {
+        const row = table.insertRow();
+        if(option.price != null){
+          row.insertCell().textContent = option.service_description;
+          row.insertCell().textContent = option.price? `R$ ${option.price}` : '--';
+          row.insertCell().textContent = option.delivery_time ? `${option.delivery_time} dias úteis *` : '--';  
+        }
+    });
+
+    container.appendChild(table);
+}
+
+
+</script>
