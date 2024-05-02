@@ -4,21 +4,27 @@
   else
     assign target = product
   endif
-
+  
   assign compare_at_price = target.compare_at_price
   assign price = target.price | default: 1999
-  assign price_min = product.price_min
-  assign price_max = product.price_max
-  assign available = target.available | default: false
-  assign money_price = price | money
-  assign money_price_min = price_min | money
-  assign money_price_max = price_max | money
+  assign weight = target.weight | default: '0.150'
+  assign width = target.metafields.frenet.width | default: '10'
+  assign height = target.metafields.frenet.height | default: '5'
+  assign length = target.metafields.frenet.height | default: '15'
+   
 -%}
 <!-- Formulário de Cálculo de Frete -->
 <div id="freteCalculator">
     <input type="text" id="cepInput" placeholder="Digite seu CEP" />
     <button onclick="calculaFrete()">Calcular Frete</button>
+  
+    <input type="hidden" name="price" value="{{ price | money | remove: 'R$ ' }}">
+    <input type="hidden" name="weight" value="{{ weight }}">
+    <input type="hidden" name="width" value="{{ width }}">
+    <input type="hidden" name="height" value="{{ height }}">
+    <input type="hidden" name="length" value="{{ length }}">
 </div>
+<strong>Valores Aproximados!</strong>
 <div id="loadingIndicator">Carregando...</div>
 <div id="freteResult"></div>
 
@@ -94,6 +100,40 @@ function getTotalPrice() {
   });
   return totalPrice;
 }
+
+// Selecione todos os botões de rádio para variantes
+var variantRadios = document.querySelectorAll('variant-radios input[type="radio"]');
+
+variantRadios.forEach(function(radio) {
+  radio.addEventListener('change', function() {
+    // Supondo que o valor de cada rádio é o ID da variante correspondente
+    updateVariantDetails(this.value);
+  });
+});
+
+function updateVariantDetails(variantId) {
+  // Aqui, você precisa ter as informações das variantes carregadas no JavaScript
+  var variantData = JSON.parse(document.querySelector('variant-radios script[type="application/json"]').textContent);
+  
+  var selectedVariant = variantData.find(variant => variant.option1 == variantId);
+
+  if (selectedVariant) {
+    // Atualiza os campos ocultos com dados da variante selecionada
+    document.querySelectorAll('#freteCalculator [name="price"]').value = selectedVariant.price || '{{ price | money | remove: 'R$ ' }}';
+    document.querySelectorAll('#freteCalculator [name="weight"]').value = selectedVariant.weight || '{{ weight }}';
+    document.querySelectorAll('#freteCalculator [name="width"]').value = selectedVariant.width || '{{ width }}';
+    document.querySelectorAll('#freteCalculator [name="height"]').value = selectedVariant.height || '{{ height }}';
+    document.querySelectorAll('#freteCalculator [name="length"]').value = selectedVariant.length || '{{ length }}';
+  }
+}
+
+// Inicializar com a variante atualmente selecionada ao carregar a página
+var initialSelectedRadio = document.querySelector('variant-radios input[type="radio"]:checked');
+if (initialSelectedRadio) {
+  updateVariantDetails(initialSelectedRadio.value);
+}
+
+  
 function calculaFrete() {
     const cep = document.getElementById('cepInput').value;
     const quantity = getQuantity();
