@@ -85,22 +85,6 @@
 
 </style>
 <script>
-function getQuantity() {
-  const quantityInput = document.querySelector('input[name="quantity"]');
-  return quantityInput ? parseInt(quantityInput.value) : 1; // Default para 1 se não houver input
-}
-
-function getTotalPrice() {
-  const priceElements = document.querySelectorAll('.price-item--sale.price-item--last');
-  let totalPrice = 0;
-  priceElements.forEach(element => {
-    const priceText = element.textContent.trim();
-    const price = parseFloat(priceText.replace('R$', '').replace('.', '').replace(',', '.'));
-    totalPrice += price;
-  });
-  return totalPrice;
-}
-
 // Selecione todos os botões de rádio para variantes
 var variantRadios = document.querySelectorAll('variant-radios input[type="radio"]');
 
@@ -118,13 +102,33 @@ function updateVariantDetails(variantId) {
   var selectedVariant = variantData.find(variant => variant.option1 == variantId);
 
   if (selectedVariant) {
+    // Converte o peso para quilogramas e o preço para formato decimal
+    var weightInKg = selectedVariant.weight / 1000; // Converte gramas para quilogramas
+    var priceInDecimal = (selectedVariant.price / 100).toFixed(2); // Converte centavos para real e formata com duas casas decimais
+
     // Atualiza os campos ocultos com dados da variante selecionada
-    document.querySelectorAll('#freteCalculator [name="price"]').value = selectedVariant.price || '{{ price | money | remove: 'R$ ' }}';
-    document.querySelectorAll('#freteCalculator [name="weight"]').value = selectedVariant.weight || '{{ weight }}';
+    document.querySelectorAll('#freteCalculator [name="price"]').value = priceInDecimal || '{{ price | money | remove: 'R$ ' }}';
+    document.querySelectorAll('#freteCalculator [name="weight"]').value = weightInKg || '{{ weight }}';
     document.querySelectorAll('#freteCalculator [name="width"]').value = selectedVariant.width || '{{ width }}';
     document.querySelectorAll('#freteCalculator [name="height"]').value = selectedVariant.height || '{{ height }}';
     document.querySelectorAll('#freteCalculator [name="length"]').value = selectedVariant.length || '{{ length }}';
   }
+}
+  
+function getQuantity() {
+  const quantityInput = document.querySelector('input[name="quantity"]');
+  return quantityInput ? parseInt(quantityInput.value) : 1; // Default para 1 se não houver input
+}
+
+function getTotalPrice() {
+  const priceElements = document.querySelectorAll('.price-item--sale.price-item--last');
+  let totalPrice = 0;
+  priceElements.forEach(element => {
+    const priceText = element.textContent.trim();
+    const price = parseFloat(priceText.replace('R$', '').replace('.', '').replace(',', '.'));
+    totalPrice += price;
+  });
+  return totalPrice;
 }
 
 // Inicializar com a variante atualmente selecionada ao carregar a página
@@ -133,7 +137,6 @@ if (initialSelectedRadio) {
   updateVariantDetails(initialSelectedRadio.value);
 }
 
-  
 function calculaFrete() {
     const cep = document.getElementById('cepInput').value;
     const quantity = getQuantity();
